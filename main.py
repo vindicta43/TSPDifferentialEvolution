@@ -1,73 +1,122 @@
+import os.path
 import random
-
-## five dataset parameters ##
-# # Solution path
-# filePath = "C:/Users/forei/Desktop/datasets/five/five_d.txt"
-# Optimal path and fitness
-# optimalSolution = [0, 2, 1, 4, 3]
-# optimalSolutionFitness = 19
+import tsplib95
+from pathlib import Path
+from datetime import datetime
 
 ## dantzig42 dataset parameters ##
-# # Solution path
-# filePath = "C:/Users/forei/Desktop/datasets/dantzig42/dantzig42_d.txt"
-# Optimal path and fitness
+# 712 hesaplanan - 699 website degeri
+# tspPath = "datasets/dantzig42.tsp"
 # optimalSolutionFitness = 699
-
-## TODO: optimalSolution path 33551 çıkıyor
-## att48 dataset parameters ##
-# # Solution path
-# filePath = "C:/Users/forei/Desktop/datasets/att48/att48_d.txt"
-# # Optimal path and fitness
-# optimalSolution = [0, 7, 37, 30, 43, 17, 6, 27, 5, 36, 18, 26, 16, 42, 29, 35, 45, 32, 19, 46, 20, 31, 38, 47, 4, 41,
-#                    23, 9, 44, 34, 3, 25, 1, 28, 33, 40, 15, 21, 2, 22, 13, 24, 12, 10, 11, 14, 39, 8]
-# optimalSolutionFitness = 33523
-
-## gr17 dataset parameters ##
-# Solution path
-filePath = "C:/Users/forei/Desktop/datasets/gr17/gr17_d.txt"
-# Optimal path and fitness
-optimalSolution = [0, 3, 12, 6, 7, 5, 16, 13, 14, 2, 10, 9, 1, 4, 8, 11, 15]
-optimalSolutionFitness = 2085
+# optimalSolution = [2, 1, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 21, 20, 19, 18, 15, 14, 13,
+#                    16, 17, 22, 23, 12, 11, 24, 27, 26, 25, 10, 9, 8, 7, 6, 5, 4, 3]
 
 
+## dj38 - Djibouti ##
+# tspPath = "datasets/dj38.tsp"
+# optimalSolutionFitness = 6656
+
+
+## att48 - US State Capitals ##
+# 10628 hesaplanan - 33523 website degeri
+# tspPath = "datasets/att48.tsp"
+# optimalSolutionFitness = 10628
+# optimalSolution = [1, 8, 38, 31, 44, 18, 7, 28, 6, 37, 19, 27, 17, 43, 30, 36, 46, 33, 20, 47, 21, 32, 39, 48, 5, 42,
+#                    24, 10, 45, 35, 4, 26, 2, 29, 34, 41, 16, 22, 3, 23, 14, 25, 13, 11, 12, 15, 40, 9]
+
+
+## ar9152 - Argentina ##
+# tspPath = "datasets/bays.tsp"
+# optimalSolutionFitness = 837479
+
+
+## ulysses - Odyssey of Ulysses ##
+tspPath = "datasets/ulysses16.tsp"
+optimalSolutionFitness = 6859
+optimalSolution = [1, 14, 13, 12, 7, 6, 15, 5, 11, 9, 10, 16, 3, 2, 4, 8]
+
+
+# Global variables
+gen = 1
+solutionArray = []
+
+
+# Produce random candidate solution
 def createCandidateSolution(size):
-    solutionBound = len(size)
-    candidate = list(range(solutionBound))
+    candidate = list(range(1, size + 1))
     random.shuffle(candidate)
     return candidate
 
 
-def evaulateFitness(singleLine):
-    fitness = 0
+# Evaulate fitness for candidate solution
+def evaluateFitness(solutions):
+    global gen
+    bestIndex = 0
+    bestFitness = 0
+    tempFitness = 0
 
-    for index, item in enumerate(singleLine):
-        fromCity = singleLine[index - 1]
-        toCity = singleLine[index]
-        fitness += int(distances[fromCity][toCity])
-        print("from", fromCity, "to", toCity, "cost:", distances[fromCity][toCity])
+    fitnessNum = 0
+    for singleSolution in solutions:
+        for index, singleFitness in enumerate(singleSolution):
+            fromCity = singleSolution[index - 1]
+            toCity = singleSolution[index]
+            edges = fromCity, toCity
+            weight = problem.get_weight(*edges)
+            tempFitness += weight
 
-    print("fitness for", singleLine, "==", fitness)
-    if fitness <= optimalSolutionFitness:
-        print("çözüme ulaşıldı:", singleLine, "fitness:", fitness)
-    print("----------")
+        print("single solution =", singleSolution)
+        print("fitness for solution", fitnessNum, "=", tempFitness)
+        print("--------------------")
+        fitnessNum += 1
+        # Initializing for first iteration
+        if bestFitness == 0:
+            bestFitness = tempFitness
+
+        if tempFitness < bestFitness:
+            bestFitness = tempFitness
+            bestIndex = solutions.index(singleSolution)
+
+        tempFitness = 0
+
+    print("best fitness for gen", gen, "=", bestFitness, "solution index =", bestIndex)
+
+    if bestFitness <= optimalSolutionFitness:
+        print("çözüme ulaşıldı gen = ", gen, "fitness:", bestFitness)
+        return
+    print("--------------------")
+    gen += 1
 
 
-with open(filePath) as file:
-    distances = file.readlines()
-    for index, item in enumerate(distances):
-        singleLine = item.split()
-        distances[index] = singleLine
+# Get random indexes for mutation progress
+def getRandomIndex(array):
+    resultArray = []
+    for randIndex in range(0, 3):
+        rand = random.randint(0, len(array) - 1)
+        print("rand =", rand)
+        resultArray.append(array[rand])
+        print("resultArray =", resultArray)
+        del array[rand]
 
-    print("distances:", distances)
+    return resultArray
 
-    solutionArray = []
+
+# Differential Algorithm Function
+def darwin(darwinArray):
+    for singleDarwin in darwinArray:
+        print("single darwin =", singleDarwin)
+        print("random index darwin =", getRandomIndex(singleDarwin))
+        print("-----")
+
+
+# Program execution starts from here
+with open(tspPath) as file:
+    problem = tsplib95.read(file)
     solutionCount = int(input("Aday çözüm sayısı: "))
     for i in range(solutionCount):
-        solutionArray.append(createCandidateSolution(distances[0]))
+        solutionArray.append(createCandidateSolution(int(problem.dimension)))
 
-    # when solution have optimalSolution array, remove comment tag
+    # When solution have optimalSolution array, remove comment tag
     solutionArray.append(optimalSolution)
-    print(solutionArray)
 
-    for solution in solutionArray:
-        evaulateFitness(solution)
+    darwin(solutionArray)
+    # evaluateFitness(solutionArray)
